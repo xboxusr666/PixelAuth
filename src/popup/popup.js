@@ -86,7 +86,11 @@ function closeModal(modalEl) {
  * @param {string} themeClass 
  */
 function applyTheme(themeClass) {
-  document.body.className = themeClass || 'theme-pixel-emerald';
+  let normalized = themeClass || 'theme-pixel-emerald';
+  if (!normalized.startsWith('theme-')) {
+    normalized = `theme-${normalized}`;
+  }
+  document.body.className = normalized;
 }
 
 /**
@@ -433,6 +437,13 @@ document.getElementById('btn-close-settings').addEventListener('click', () => cl
 document.getElementById('btn-close-detail').addEventListener('click', () => closeModal(modals.detail));
 document.getElementById('btn-close-paste-import').addEventListener('click', () => closeModal(modals.pasteImport));
 document.getElementById('btn-close-change-pwd').addEventListener('click', () => closeModal(modals.changePassword));
+
+// Close any open modal on Escape key
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    Object.values(modals).forEach(m => closeModal(m));
+  }
+});
 
 // Add Modal Tabs
 document.querySelectorAll('.modal-tabs .tab-btn').forEach(btn => {

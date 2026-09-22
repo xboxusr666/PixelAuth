@@ -18,7 +18,7 @@ const STORAGE_KEYS = {
 const DEFAULT_SETTINGS = {
   sessionUnlock: true,         // Option to disable password prompt during browser session
   autoLockMinutes: 0,          // 0 = browser close only; >0 = timeout in minutes
-  theme: 'pixel-emerald',      // 'pixel-emerald', 'cyber-blue', 'retro-amber', 'dark-slate'
+  theme: 'theme-pixel-emerald',// 'theme-pixel-emerald', 'theme-cyber-blue', 'theme-retro-amber', 'theme-dark-slate'
   sortBy: 'manual',            // 'manual', 'issuer', 'account', 'recent'
   alwaysShowCountdown: true,   // Show remaining seconds as numbers
   hideCodesOnOpen: false       // Mask OTP codes until hovered/clicked
@@ -222,7 +222,11 @@ export class VaultManager {
    */
   getSettings() {
     const vault = this.getVault();
-    return vault.settings || { ...DEFAULT_SETTINGS };
+    const settings = vault.settings || { ...DEFAULT_SETTINGS };
+    if (settings.theme && !settings.theme.startsWith('theme-')) {
+      settings.theme = `theme-${settings.theme}`;
+    }
+    return settings;
   }
 
   /**
