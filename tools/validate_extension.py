@@ -55,9 +55,11 @@ def check_no_emails():
 
     violations = []
     for root, _, files in os.walk("."):
-        if ".git" in root or "__pycache__" in root:
+        if ".git" in root or "__pycache__" in root or "dist" in root:
             continue
         for file in files:
+            if file.endswith(('.png', '.jpg', '.zip', '.crx', '.ico', '.pyc')):
+                continue
             file_path = os.path.join(root, file)
             try:
                 with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
