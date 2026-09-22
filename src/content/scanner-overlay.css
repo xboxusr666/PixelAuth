@@ -1,0 +1,57 @@
+/* PixelAuth On-Page Scanner Overlay Styles */
+#pixelauth-scanner-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 2147483647;
+  cursor: crosshair;
+  user-select: none;
+  background: rgba(15, 23, 42, 0.45);
+  font-family: 'Courier New', Courier, monospace;
+}
+
+#pixelauth-scanner-banner {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0f172a;
+  border: 2px solid #10b981;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  padding: 10px 20px;
+  color: #34d399;
+  font-size: 14px;
+  font-weight: bold;
+  border-radius: 4px;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#pixelauth-scanner-banner button {
+  background: #dc2626;
+  color: #ffffff;
+  border: 1px solid #ef4444;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 2px;
+  font-family: inherit;
+  font-weight: bold;
+}
+
+#pixelauth-scanner-banner button:hover {
+  background: #b91c1c;
+}
+
+#pixelauth-scanner-box {
+  position: absolute;
+  border: 2px dashed #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.5);
+  pointer-events: none;
+  display: none;
+}

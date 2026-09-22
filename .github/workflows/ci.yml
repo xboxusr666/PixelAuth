@@ -1,0 +1,84 @@
+name: PixelAuth CI & Release Packaging
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  validate-and-package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate Manifest V3 JSON Syntax
+        run: |
+          python -c "
+          import json
+          with open('manifest.json') as f:
+              m = json.load(f)
+          assert m.get('manifest_version') == 3, 'manifest_version must be 3'
+          assert 'icons' in m, 'icons must be specified'
+          print('Manifest syntax and version 3 verified successfully.')
+          "
+
+      - name: Verify Icon Assets Existence & Dimensions
+        run: |
+          python -m pip install Pillow
+          python -c "
+          from PIL import Image
+          import os
+
+          expected_icons = {
+              'assets/icons/icon-16.png': (16, 16),
+              'assets/icons/icon-32.png': (32, 32),
+              'assets/icons/icon-48.png': (48, 48),
+              'assets/icons/icon-128.png': (128, 128)
+          }
+
+          for path, expected_dim in expected_icons.items():
+              assert os.path.exists(path), f'Missing icon file: {path}'
+              with Image.open(path) as img:
+                  assert img.size == expected_dim, f'Wrong dimensions for {path}: {img.size} != {expected_dim}'
+                  print(f'[PASS] {path} verified at {img.size}')
+          "
+
+      - name: Run Cryptographic & RFC 6238 Test Vectors
+        run: |
+          python tools/test_totp_vectors.py
+
+      - name: Package Extension ZIP
+        run: |
+          mkdir -p dist
+          zip -r dist/pixelauth-extension.zip \
+            manifest.json \
+            LICENSE \
+            README.md \
+            PRIVACY.md \
+            assets/icons/*.png \
+            src/
+
+      - name: Upload Extension Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pixelauth-extension
+          path: dist/pixelauth-extension.zip
+
+      - name: Create GitHub Release (On Version Tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/pixelauth-extension.zip
+          body_path: CHANGELOG.md
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

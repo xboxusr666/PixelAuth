@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PixelAuth - MFA Wallet</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body class="theme-pixel-emerald">
+  <div id="app" class="app-container">
+
+    <!-- Toast Notification Banner -->
+    <div id="toast" class="toast hidden"></div>
+
+    <!-- 1. SETUP MASTER PASSWORD VIEW (First Run) -->
+    <section id="view-setup" class="view hidden">
+      <div class="pixel-card auth-card">
+        <div class="pixel-brand">
+          <img src="../../assets/icons/icon-48.png" alt="PixelAuth" class="pixel-icon">
+          <h1 class="pixel-title">PixelAuth</h1>
+          <p class="pixel-subtitle">MFA Authenticator Wallet</p>
+        </div>
+        <div class="pixel-alert info">
+          Welcome! Create a master password to encrypt your 2FA wallet using AES-256-GCM.
+        </div>
+        <form id="form-setup" class="pixel-form">
+          <div class="form-group">
+            <label for="setup-password">Master Password</label>
+            <input type="password" id="setup-password" required minlength="6" placeholder="At least 6 characters" autocomplete="new-password">
+          </div>
+          <div class="form-group">
+            <label for="setup-confirm">Confirm Password</label>
+            <input type="password" id="setup-confirm" required minlength="6" placeholder="Re-enter password" autocomplete="new-password">
+          </div>
+          <div class="form-group checkbox-group">
+            <label class="pixel-checkbox">
+              <input type="checkbox" id="setup-session-unlock" checked>
+              <span class="checkmark"></span>
+              Keep unlocked during browser session
+            </label>
+            <span class="hint-text">Disables repeated password prompts until Chrome is closed</span>
+          </div>
+          <button type="submit" class="pixel-btn primary full-width">CREATE ENCRYPTED VAULT</button>
+        </form>
+        <div class="footer-credit">By JTS Software | GPL 3.0</div>
+      </div>
+    </section>
+
+    <!-- 2. UNLOCK VAULT VIEW -->
+    <section id="view-unlock" class="view hidden">
+      <div class="pixel-card auth-card">
+        <div class="pixel-brand">
+          <img src="../../assets/icons/icon-48.png" alt="PixelAuth" class="pixel-icon">
+          <h1 class="pixel-title">PixelAuth</h1>
+          <p class="pixel-subtitle">Wallet Locked</p>
+        </div>
+        <form id="form-unlock" class="pixel-form">
+          <div class="form-group">
+            <label for="unlock-password">Master Password</label>
+            <input type="password" id="unlock-password" required placeholder="Enter master password" autocomplete="current-password" autofocus>
+          </div>
+          <div class="form-group checkbox-group">
+            <label class="pixel-checkbox">
+              <input type="checkbox" id="unlock-session-unlock" checked>
+              <span class="checkmark"></span>
+              Keep unlocked during session
+            </label>
+          </div>
+          <button type="submit" class="pixel-btn primary full-width">UNLOCK WALLET</button>
+        </form>
+        <div id="unlock-error" class="pixel-alert danger hidden"></div>
+        <div class="footer-credit">By JTS Software | 100% Offline</div>
+      </div>
+    </section>
+
+    <!-- 3. MAIN WALLET VIEW -->
+    <section id="view-main" class="view hidden">
+      <!-- App Header -->
+      <header class="app-header">
+        <div class="header-left">
+          <img src="../../assets/icons/icon-32.png" alt="Icon" class="header-icon">
+          <span class="header-brand">PixelAuth</span>
+        </div>
+        <div class="header-right">
+          <button id="btn-header-add" class="pixel-icon-btn" title="Add Account" aria-label="Add Account">
+            <span class="icon">+</span>
+          </button>
+          <button id="btn-header-settings" class="pixel-icon-btn" title="Settings" aria-label="Settings">
+            <span class="icon">&#9881;</span>
+          </button>
+          <button id="btn-header-lock" class="pixel-icon-btn danger" title="Lock Wallet" aria-label="Lock Wallet">
+            <span class="icon">&#128274;</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Search and Filter Bar -->
+      <div class="search-container">
+        <input type="text" id="search-input" placeholder="Search issuer or account..." autocomplete="off">
+        <button id="btn-clear-search" class="clear-btn hidden" title="Clear">&times;</button>
+      </div>
+
+      <!-- Pending QR Import Alert -->
+      <div id="pending-scans-banner" class="pending-banner hidden">
+        <span>New QR code detected!</span>
+        <button id="btn-import-pending" class="pixel-btn small accent">Add It</button>
+      </div>
+
+      <!-- Account Cards List -->
+      <div id="accounts-container" class="accounts-list">
+        <!-- Dynamically injected account cards -->
+      </div>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="empty-state hidden">
+        <div class="empty-pixel-icon">&#128273;</div>
+        <h3>No MFA Accounts Yet</h3>
+        <p>Scan a QR code from a website, upload an image, or add keys manually.</p>
+        <button id="btn-empty-add" class="pixel-btn primary">ADD YOUR FIRST ACCOUNT</button>
+      </div>
+    </section>
+
+    <!-- 4. ADD ACCOUNT MODAL -->
+    <div id="modal-add" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2>Add New Account</h2>
+          <button class="modal-close" id="btn-close-add">&times;</button>
+        </div>
+
+        <div class="modal-tabs">
+          <button class="tab-btn active" data-tab="tab-scan">Scan Screen</button>
+          <button class="tab-btn" data-tab="tab-upload">Upload QR</button>
+          <button class="tab-btn" data-tab="tab-manual">Manual</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Tab 1: On-Page Scan -->
+          <div id="tab-scan" class="tab-content active">
+            <div class="scan-instructions">
+              <p>Snip a QR code directly from the active webpage without opening your camera.</p>
+              <div class="pixel-box">
+                1. Click <b>Snip Screen</b> below.<br>
+                2. Drag a box over any QR code on screen.<br>
+                3. PixelAuth will decode and populate it instantly.
+              </div>
+              <button id="btn-trigger-screen-snip" class="pixel-btn primary full-width">
+                LAUNCH ON-PAGE SNIP
+              </button>
+            </div>
+          </div>
+
+          <!-- Tab 2: Upload Image -->
+          <div id="tab-upload" class="tab-content">
+            <div id="drop-zone" class="drop-zone">
+              <div class="drop-icon">&#128190;</div>
+              <p>Drag & drop QR image here</p>
+              <span>or click to browse</span>
+              <input type="file" id="file-qr-upload" accept="image/*" class="file-input">
+            </div>
+          </div>
+
+          <!-- Tab 3: Manual Entry -->
+          <div id="tab-manual" class="tab-content">
+            <form id="form-manual-add" class="pixel-form compact">
+              <div class="form-group">
+                <label for="manual-issuer">Issuer / Service</label>
+                <input type="text" id="manual-issuer" placeholder="e.g. GitHub, Google, AWS" required>
+              </div>
+              <div class="form-group">
+                <label for="manual-account">Account / Username</label>
+                <input type="text" id="manual-account" placeholder="e.g. user@example.com" required>
+              </div>
+              <div class="form-group">
+                <label for="manual-secret">Secret Key (Base32)</label>
+                <input type="text" id="manual-secret" placeholder="e.g. JBSWY3DPEHPK3PXP" required autocomplete="off">
+              </div>
+              <div class="form-row">
+                <div class="form-group half">
+                  <label for="manual-type">Type</label>
+                  <select id="manual-type">
+                    <option value="totp" selected>TOTP (Time)</option>
+                    <option value="hotp">HOTP (Counter)</option>
+                  </select>
+                </div>
+                <div class="form-group half">
+                  <label for="manual-digits">Digits</label>
+                  <select id="manual-digits">
+                    <option value="6" selected>6 Digits</option>
+                    <option value="8">8 Digits</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group half">
+                  <label for="manual-period">Period (s)</label>
+                  <input type="number" id="manual-period" value="30" min="5" max="300">
+                </div>
+                <div class="form-group half">
+                  <label for="manual-algo">Algorithm</label>
+                  <select id="manual-algo">
+                    <option value="SHA-1" selected>SHA-1</option>
+                    <option value="SHA-256">SHA-256</option>
+                    <option value="SHA-512">SHA-512</option>
+                  </select>
+                </div>
+              </div>
+              <button type="submit" class="pixel-btn primary full-width">SAVE ACCOUNT</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. SETTINGS & MIGRATION MODAL -->
+    <div id="modal-settings" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2>Settings & Wallet</h2>
+          <button class="modal-close" id="btn-close-settings">&times;</button>
+        </div>
+
+        <div class="modal-tabs">
+          <button class="settings-tab-btn active" data-tab="stab-security">Security</button>
+          <button class="settings-tab-btn" data-tab="stab-migrate">Backup</button>
+          <button class="settings-tab-btn" data-tab="stab-about">About</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Security Settings -->
+          <div id="stab-security" class="settings-tab-content active">
+            <div class="setting-item">
+              <div class="setting-info">
+                <h4>Disable Password Prompt During Session</h4>
+                <p>Keep the wallet unlocked in temporary browser memory until Chrome is closed.</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="setting-session-unlock">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-item column">
+              <div class="setting-info">
+                <h4>Inactivity Auto-Lock</h4>
+                <p>Automatically lock vault after a period of idle time.</p>
+              </div>
+              <select id="setting-auto-lock" class="pixel-select">
+                <option value="0">Only when browser closes</option>
+                <option value="5">5 Minutes</option>
+                <option value="15">15 Minutes</option>
+                <option value="30">30 Minutes</option>
+                <option value="60">1 Hour</option>
+              </select>
+            </div>
+
+            <div class="setting-item column">
+              <div class="setting-info">
+                <h4>Color Theme</h4>
+                <p>Choose your retro pixel color scheme.</p>
+              </div>
+              <select id="setting-theme" class="pixel-select">
+                <option value="theme-pixel-emerald">Pixel Emerald (Retro PC)</option>
+                <option value="theme-cyber-blue">Cyber Blue (Neon)</option>
+                <option value="theme-retro-amber">Retro Amber (CRT)</option>
+                <option value="theme-dark-slate">Dark Slate (Minimal)</option>
+              </select>
+            </div>
+
+            <div class="setting-section-title">Master Password</div>
+            <button id="btn-change-password-modal" class="pixel-btn secondary full-width">
+              Change Master Password
+            </button>
+          </div>
+
+          <!-- Migration / Backup -->
+          <div id="stab-migrate" class="settings-tab-content">
+            <div class="migration-group">
+              <h4>Import Accounts</h4>
+              <p>Supports Google Authenticator, Aegis, 2FAS, Bitwarden, URI lists, and PixelAuth backups.</p>
+              <div class="btn-row">
+                <button id="btn-import-file" class="pixel-btn primary">Select File to Import</button>
+                <input type="file" id="file-import-input" class="hidden" accept=".json,.txt,.csv">
+                <button id="btn-import-text" class="pixel-btn secondary">Paste Text/URI</button>
+              </div>
+            </div>
+
+            <div class="migration-group">
+              <h4>Export Vault</h4>
+              <p>Save your MFA accounts to back them up or transfer to another device.</p>
+              <div class="btn-col">
+                <button id="btn-export-encrypted" class="pixel-btn accent full-width">
+                  Encrypted Backup (.json)
+                </button>
+                <button id="btn-export-plain" class="pixel-btn secondary full-width">
+                  Plain JSON Backup (.json)
+                </button>
+                <button id="btn-export-uris" class="pixel-btn secondary full-width">
+                  Standard URI List (.txt)
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- About / Legal -->
+          <div id="stab-about" class="settings-tab-content">
+            <div class="about-card">
+              <img src="../../assets/icons/icon-48.png" alt="PixelAuth" class="pixel-icon small">
+              <h3>PixelAuth v1.0.0</h3>
+              <p class="about-tag">Open-Source MFA Authenticator Wallet</p>
+              <div class="about-details">
+                <p><b>Developer:</b> JTS Software</p>
+                <p><b>License:</b> GNU General Public License v3.0</p>
+                <p><b>Security:</b> AES-256-GCM + PBKDF2 (150,000 iter)</p>
+                <p><b>Privacy:</b> 100% Offline. Zero tracking or telemetry.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. ACCOUNT DETAIL / EXPORT QR MODAL -->
+    <div id="modal-detail" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2 id="detail-title">Account Details</h2>
+          <button class="modal-close" id="btn-close-detail">&times;</button>
+        </div>
+        <div class="modal-body center">
+          <!-- QR Canvas -->
+          <div class="qr-wrapper">
+            <canvas id="detail-qr-canvas"></canvas>
+            <p class="qr-hint">Scan with Google Authenticator or mobile camera</p>
+          </div>
+
+          <div class="detail-fields">
+            <div class="detail-row">
+              <span class="detail-label">Issuer:</span>
+              <span id="detail-issuer" class="detail-val"></span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Account:</span>
+              <span id="detail-account" class="detail-val"></span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Secret:</span>
+              <span id="detail-secret" class="detail-val monospace"></span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Algorithm:</span>
+              <span id="detail-algo" class="detail-val"></span>
+            </div>
+          </div>
+
+          <div class="btn-row full">
+            <button id="btn-copy-uri" class="pixel-btn secondary">Copy URI</button>
+            <button id="btn-delete-account" class="pixel-btn danger">Delete Account</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. PASTE IMPORT TEXT MODAL -->
+    <div id="modal-paste-import" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2>Import Accounts Text</h2>
+          <button class="modal-close" id="btn-close-paste-import">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>Paste JSON backup, Google Authenticator migration URI, or otpauth:// URIs below:</p>
+          <textarea id="paste-import-textarea" rows="7" placeholder="otpauth://totp/... or JSON content"></textarea>
+          <div id="import-password-container" class="form-group hidden">
+            <label for="import-backup-password">Backup Decryption Password</label>
+            <input type="password" id="import-backup-password" placeholder="Enter password for encrypted backup">
+          </div>
+          <button id="btn-submit-paste-import" class="pixel-btn primary full-width">PROCESS IMPORT</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8. CHANGE PASSWORD MODAL -->
+    <div id="modal-change-password" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2>Change Master Password</h2>
+          <button class="modal-close" id="btn-close-change-pwd">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="form-change-password" class="pixel-form">
+            <div class="form-group">
+              <label for="cp-current">Current Password</label>
+              <input type="password" id="cp-current" required autocomplete="current-password">
+            </div>
+            <div class="form-group">
+              <label for="cp-new">New Password (Min 6 chars)</label>
+              <input type="password" id="cp-new" required minlength="6" autocomplete="new-password">
+            </div>
+            <div class="form-group">
+              <label for="cp-confirm">Confirm New Password</label>
+              <input type="password" id="cp-confirm" required minlength="6" autocomplete="new-password">
+            </div>
+            <button type="submit" class="pixel-btn primary full-width">UPDATE PASSWORD</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
