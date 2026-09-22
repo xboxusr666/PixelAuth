@@ -101,7 +101,7 @@ PixelAuth operates **100% locally and offline**. It makes zero outbound network 
 
 1. Clone or download this repository:
    ```bash
-   git clone https://github.com/username/PixelAuth.git
+   git clone https://github.com/xboxusr666/PixelAuth.git
    ```
 2. Open Google Chrome and navigate to:
    ```text

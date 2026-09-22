@@ -15,7 +15,7 @@ We are committed to providing a welcoming, respectful, and harassment-free envir
 ## How to Contribute
 
 ### 1. Reporting Bugs
-- Check the [GitHub Issues](https://github.com/username/PixelAuth/issues) tracker to ensure the bug hasn't already been reported.
+- Check the [GitHub Issues](https://github.com/xboxusr666/PixelAuth/issues) tracker to ensure the bug hasn't already been reported.
 - If not, open a new issue using the **Bug Report** template.
 - Include clear reproduction steps, browser version, and console error messages if applicable.
 - **Never post your real 2FA secrets, private keys, or QR codes in issue descriptions.**
@@ -28,7 +28,7 @@ We are committed to providing a welcoming, respectful, and harassment-free envir
 
 1. **Fork the Repository** and clone your fork locally:
    ```bash
-   git clone https://github.com/your-username/PixelAuth.git
+   git clone https://github.com/xboxusr666/PixelAuth.git
    cd PixelAuth
    ```
 2. **Create a Feature Branch**:
